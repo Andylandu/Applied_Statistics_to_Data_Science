@@ -1,0 +1,2084 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "530c8abc",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006533,
+     "end_time": "2025-02-22T19:52:11.505384",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:11.498851",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# ESTIMATES OF LOCATION: \n",
+    "## It provides a single value around which data points tend to cluster or spread out.\n",
+    "## It gives a descriptive summary of the numerical data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b63457df",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005429,
+     "end_time": "2025-02-22T19:52:11.516759",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:11.511330",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## TASK :\n",
+    "### Kaggle Dataset: World Happiness Report (158 entries x 12 features)\n",
+    "#### 1) Find the median of each numerical feature of this dataset within each region.\n",
+    "#### 2) Calculate the happiness score trimmed mean of the world to reduce the influence of outliers.\n",
+    "#### 3) Calculate the average happiness score of each region, then their respective trimmed means.\n",
+    "#### 4) Compute the weighted mean and median of the two following factors: \n",
+    "####      GDP per capita and life expectancy, both weighted by the family support."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "c009f872",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:11.529789Z",
+     "iopub.status.busy": "2025-02-22T19:52:11.529385Z",
+     "iopub.status.idle": "2025-02-22T19:52:17.624643Z",
+     "shell.execute_reply": "2025-02-22T19:52:17.623253Z"
+    },
+    "papermill": {
+     "duration": 6.104252,
+     "end_time": "2025-02-22T19:52:17.626824",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:11.522572",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Collecting wquantiles\r\n",
+      "  Downloading wquantiles-0.6-py3-none-any.whl.metadata (1.1 kB)\r\n",
+      "Requirement already satisfied: numpy>=1.18 in /usr/local/lib/python3.10/dist-packages (from wquantiles) (1.26.4)\r\n",
+      "Requirement already satisfied: mkl_fft in /usr/local/lib/python3.10/dist-packages (from numpy>=1.18->wquantiles) (1.3.8)\r\n",
+      "Requirement already satisfied: mkl_random in /usr/local/lib/python3.10/dist-packages (from numpy>=1.18->wquantiles) (1.2.4)\r\n",
+      "Requirement already satisfied: mkl_umath in /usr/local/lib/python3.10/dist-packages (from numpy>=1.18->wquantiles) (0.1.1)\r\n",
+      "Requirement already satisfied: mkl in /usr/local/lib/python3.10/dist-packages (from numpy>=1.18->wquantiles) (2025.0.1)\r\n",
+      "Requirement already satisfied: tbb4py in /usr/local/lib/python3.10/dist-packages (from numpy>=1.18->wquantiles) (2022.0.0)\r\n",
+      "Requirement already satisfied: mkl-service in /usr/local/lib/python3.10/dist-packages (from numpy>=1.18->wquantiles) (2.4.1)\r\n",
+      "Requirement already satisfied: intel-openmp>=2024 in /usr/local/lib/python3.10/dist-packages (from mkl->numpy>=1.18->wquantiles) (2024.2.0)\r\n",
+      "Requirement already satisfied: tbb==2022.* in /usr/local/lib/python3.10/dist-packages (from mkl->numpy>=1.18->wquantiles) (2022.0.0)\r\n",
+      "Requirement already satisfied: tcmlib==1.* in /usr/local/lib/python3.10/dist-packages (from tbb==2022.*->mkl->numpy>=1.18->wquantiles) (1.2.0)\r\n",
+      "Requirement already satisfied: intel-cmplr-lib-rt in /usr/local/lib/python3.10/dist-packages (from mkl_umath->numpy>=1.18->wquantiles) (2024.2.0)\r\n",
+      "Requirement already satisfied: intel-cmplr-lib-ur==2024.2.0 in /usr/local/lib/python3.10/dist-packages (from intel-openmp>=2024->mkl->numpy>=1.18->wquantiles) (2024.2.0)\r\n",
+      "Downloading wquantiles-0.6-py3-none-any.whl (3.3 kB)\r\n",
+      "Installing collected packages: wquantiles\r\n",
+      "Successfully installed wquantiles-0.6\r\n"
+     ]
+    }
+   ],
+   "source": [
+    "!pip install wquantiles"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "759bbd51",
+   "metadata": {
+    "_cell_guid": "b1076dfc-b9ad-4769-8c92-a6c4dae69d19",
+    "_uuid": "8f2839f25d086af736a60e9eeb907d3b93b6e0e5",
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:17.640548Z",
+     "iopub.status.busy": "2025-02-22T19:52:17.640203Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.033452Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.032180Z"
+    },
+    "papermill": {
+     "duration": 2.402761,
+     "end_time": "2025-02-22T19:52:20.035682",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:17.632921",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import scipy.stats as sstats\n",
+    "import wquantiles"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "11887b80",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.050379Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.049849Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.073076Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.072027Z"
+    },
+    "papermill": {
+     "duration": 0.032931,
+     "end_time": "2025-02-22T19:52:20.075099",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.042168",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "df = pd.read_csv('/kaggle/input/world-happiness/2015.csv')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "1fec4959",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.089946Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.089501Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.128122Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.126922Z"
+    },
+    "papermill": {
+     "duration": 0.047951,
+     "end_time": "2025-02-22T19:52:20.129888",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.081937",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Country</th>\n",
+       "      <th>Region</th>\n",
+       "      <th>Happiness Rank</th>\n",
+       "      <th>Happiness Score</th>\n",
+       "      <th>Standard Error</th>\n",
+       "      <th>Economy (GDP per Capita)</th>\n",
+       "      <th>Family</th>\n",
+       "      <th>Health (Life Expectancy)</th>\n",
+       "      <th>Freedom</th>\n",
+       "      <th>Trust (Government Corruption)</th>\n",
+       "      <th>Generosity</th>\n",
+       "      <th>Dystopia Residual</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Switzerland</td>\n",
+       "      <td>Western Europe</td>\n",
+       "      <td>1</td>\n",
+       "      <td>7.587</td>\n",
+       "      <td>0.03411</td>\n",
+       "      <td>1.39651</td>\n",
+       "      <td>1.34951</td>\n",
+       "      <td>0.94143</td>\n",
+       "      <td>0.66557</td>\n",
+       "      <td>0.41978</td>\n",
+       "      <td>0.29678</td>\n",
+       "      <td>2.51738</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Iceland</td>\n",
+       "      <td>Western Europe</td>\n",
+       "      <td>2</td>\n",
+       "      <td>7.561</td>\n",
+       "      <td>0.04884</td>\n",
+       "      <td>1.30232</td>\n",
+       "      <td>1.40223</td>\n",
+       "      <td>0.94784</td>\n",
+       "      <td>0.62877</td>\n",
+       "      <td>0.14145</td>\n",
+       "      <td>0.43630</td>\n",
+       "      <td>2.70201</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>Denmark</td>\n",
+       "      <td>Western Europe</td>\n",
+       "      <td>3</td>\n",
+       "      <td>7.527</td>\n",
+       "      <td>0.03328</td>\n",
+       "      <td>1.32548</td>\n",
+       "      <td>1.36058</td>\n",
+       "      <td>0.87464</td>\n",
+       "      <td>0.64938</td>\n",
+       "      <td>0.48357</td>\n",
+       "      <td>0.34139</td>\n",
+       "      <td>2.49204</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Norway</td>\n",
+       "      <td>Western Europe</td>\n",
+       "      <td>4</td>\n",
+       "      <td>7.522</td>\n",
+       "      <td>0.03880</td>\n",
+       "      <td>1.45900</td>\n",
+       "      <td>1.33095</td>\n",
+       "      <td>0.88521</td>\n",
+       "      <td>0.66973</td>\n",
+       "      <td>0.36503</td>\n",
+       "      <td>0.34699</td>\n",
+       "      <td>2.46531</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>Canada</td>\n",
+       "      <td>North America</td>\n",
+       "      <td>5</td>\n",
+       "      <td>7.427</td>\n",
+       "      <td>0.03553</td>\n",
+       "      <td>1.32629</td>\n",
+       "      <td>1.32261</td>\n",
+       "      <td>0.90563</td>\n",
+       "      <td>0.63297</td>\n",
+       "      <td>0.32957</td>\n",
+       "      <td>0.45811</td>\n",
+       "      <td>2.45176</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>Finland</td>\n",
+       "      <td>Western Europe</td>\n",
+       "      <td>6</td>\n",
+       "      <td>7.406</td>\n",
+       "      <td>0.03140</td>\n",
+       "      <td>1.29025</td>\n",
+       "      <td>1.31826</td>\n",
+       "      <td>0.88911</td>\n",
+       "      <td>0.64169</td>\n",
+       "      <td>0.41372</td>\n",
+       "      <td>0.23351</td>\n",
+       "      <td>2.61955</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>6</th>\n",
+       "      <td>Netherlands</td>\n",
+       "      <td>Western Europe</td>\n",
+       "      <td>7</td>\n",
+       "      <td>7.378</td>\n",
+       "      <td>0.02799</td>\n",
+       "      <td>1.32944</td>\n",
+       "      <td>1.28017</td>\n",
+       "      <td>0.89284</td>\n",
+       "      <td>0.61576</td>\n",
+       "      <td>0.31814</td>\n",
+       "      <td>0.47610</td>\n",
+       "      <td>2.46570</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>7</th>\n",
+       "      <td>Sweden</td>\n",
+       "      <td>Western Europe</td>\n",
+       "      <td>8</td>\n",
+       "      <td>7.364</td>\n",
+       "      <td>0.03157</td>\n",
+       "      <td>1.33171</td>\n",
+       "      <td>1.28907</td>\n",
+       "      <td>0.91087</td>\n",
+       "      <td>0.65980</td>\n",
+       "      <td>0.43844</td>\n",
+       "      <td>0.36262</td>\n",
+       "      <td>2.37119</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>8</th>\n",
+       "      <td>New Zealand</td>\n",
+       "      <td>Australia and New Zealand</td>\n",
+       "      <td>9</td>\n",
+       "      <td>7.286</td>\n",
+       "      <td>0.03371</td>\n",
+       "      <td>1.25018</td>\n",
+       "      <td>1.31967</td>\n",
+       "      <td>0.90837</td>\n",
+       "      <td>0.63938</td>\n",
+       "      <td>0.42922</td>\n",
+       "      <td>0.47501</td>\n",
+       "      <td>2.26425</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>9</th>\n",
+       "      <td>Australia</td>\n",
+       "      <td>Australia and New Zealand</td>\n",
+       "      <td>10</td>\n",
+       "      <td>7.284</td>\n",
+       "      <td>0.04083</td>\n",
+       "      <td>1.33358</td>\n",
+       "      <td>1.30923</td>\n",
+       "      <td>0.93156</td>\n",
+       "      <td>0.65124</td>\n",
+       "      <td>0.35637</td>\n",
+       "      <td>0.43562</td>\n",
+       "      <td>2.26646</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>10</th>\n",
+       "      <td>Israel</td>\n",
+       "      <td>Middle East and Northern Africa</td>\n",
+       "      <td>11</td>\n",
+       "      <td>7.278</td>\n",
+       "      <td>0.03470</td>\n",
+       "      <td>1.22857</td>\n",
+       "      <td>1.22393</td>\n",
+       "      <td>0.91387</td>\n",
+       "      <td>0.41319</td>\n",
+       "      <td>0.07785</td>\n",
+       "      <td>0.33172</td>\n",
+       "      <td>3.08854</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>11</th>\n",
+       "      <td>Costa Rica</td>\n",
+       "      <td>Latin America and Caribbean</td>\n",
+       "      <td>12</td>\n",
+       "      <td>7.226</td>\n",
+       "      <td>0.04454</td>\n",
+       "      <td>0.95578</td>\n",
+       "      <td>1.23788</td>\n",
+       "      <td>0.86027</td>\n",
+       "      <td>0.63376</td>\n",
+       "      <td>0.10583</td>\n",
+       "      <td>0.25497</td>\n",
+       "      <td>3.17728</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>12</th>\n",
+       "      <td>Austria</td>\n",
+       "      <td>Western Europe</td>\n",
+       "      <td>13</td>\n",
+       "      <td>7.200</td>\n",
+       "      <td>0.03751</td>\n",
+       "      <td>1.33723</td>\n",
+       "      <td>1.29704</td>\n",
+       "      <td>0.89042</td>\n",
+       "      <td>0.62433</td>\n",
+       "      <td>0.18676</td>\n",
+       "      <td>0.33088</td>\n",
+       "      <td>2.53320</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>13</th>\n",
+       "      <td>Mexico</td>\n",
+       "      <td>Latin America and Caribbean</td>\n",
+       "      <td>14</td>\n",
+       "      <td>7.187</td>\n",
+       "      <td>0.04176</td>\n",
+       "      <td>1.02054</td>\n",
+       "      <td>0.91451</td>\n",
+       "      <td>0.81444</td>\n",
+       "      <td>0.48181</td>\n",
+       "      <td>0.21312</td>\n",
+       "      <td>0.14074</td>\n",
+       "      <td>3.60214</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>14</th>\n",
+       "      <td>United States</td>\n",
+       "      <td>North America</td>\n",
+       "      <td>15</td>\n",
+       "      <td>7.119</td>\n",
+       "      <td>0.03839</td>\n",
+       "      <td>1.39451</td>\n",
+       "      <td>1.24711</td>\n",
+       "      <td>0.86179</td>\n",
+       "      <td>0.54604</td>\n",
+       "      <td>0.15890</td>\n",
+       "      <td>0.40105</td>\n",
+       "      <td>2.51011</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "          Country                           Region  Happiness Rank  \\\n",
+       "0     Switzerland                   Western Europe               1   \n",
+       "1         Iceland                   Western Europe               2   \n",
+       "2         Denmark                   Western Europe               3   \n",
+       "3          Norway                   Western Europe               4   \n",
+       "4          Canada                    North America               5   \n",
+       "5         Finland                   Western Europe               6   \n",
+       "6     Netherlands                   Western Europe               7   \n",
+       "7          Sweden                   Western Europe               8   \n",
+       "8     New Zealand        Australia and New Zealand               9   \n",
+       "9       Australia        Australia and New Zealand              10   \n",
+       "10         Israel  Middle East and Northern Africa              11   \n",
+       "11     Costa Rica      Latin America and Caribbean              12   \n",
+       "12        Austria                   Western Europe              13   \n",
+       "13         Mexico      Latin America and Caribbean              14   \n",
+       "14  United States                    North America              15   \n",
+       "\n",
+       "    Happiness Score  Standard Error  Economy (GDP per Capita)   Family  \\\n",
+       "0             7.587         0.03411                   1.39651  1.34951   \n",
+       "1             7.561         0.04884                   1.30232  1.40223   \n",
+       "2             7.527         0.03328                   1.32548  1.36058   \n",
+       "3             7.522         0.03880                   1.45900  1.33095   \n",
+       "4             7.427         0.03553                   1.32629  1.32261   \n",
+       "5             7.406         0.03140                   1.29025  1.31826   \n",
+       "6             7.378         0.02799                   1.32944  1.28017   \n",
+       "7             7.364         0.03157                   1.33171  1.28907   \n",
+       "8             7.286         0.03371                   1.25018  1.31967   \n",
+       "9             7.284         0.04083                   1.33358  1.30923   \n",
+       "10            7.278         0.03470                   1.22857  1.22393   \n",
+       "11            7.226         0.04454                   0.95578  1.23788   \n",
+       "12            7.200         0.03751                   1.33723  1.29704   \n",
+       "13            7.187         0.04176                   1.02054  0.91451   \n",
+       "14            7.119         0.03839                   1.39451  1.24711   \n",
+       "\n",
+       "    Health (Life Expectancy)  Freedom  Trust (Government Corruption)  \\\n",
+       "0                    0.94143  0.66557                        0.41978   \n",
+       "1                    0.94784  0.62877                        0.14145   \n",
+       "2                    0.87464  0.64938                        0.48357   \n",
+       "3                    0.88521  0.66973                        0.36503   \n",
+       "4                    0.90563  0.63297                        0.32957   \n",
+       "5                    0.88911  0.64169                        0.41372   \n",
+       "6                    0.89284  0.61576                        0.31814   \n",
+       "7                    0.91087  0.65980                        0.43844   \n",
+       "8                    0.90837  0.63938                        0.42922   \n",
+       "9                    0.93156  0.65124                        0.35637   \n",
+       "10                   0.91387  0.41319                        0.07785   \n",
+       "11                   0.86027  0.63376                        0.10583   \n",
+       "12                   0.89042  0.62433                        0.18676   \n",
+       "13                   0.81444  0.48181                        0.21312   \n",
+       "14                   0.86179  0.54604                        0.15890   \n",
+       "\n",
+       "    Generosity  Dystopia Residual  \n",
+       "0      0.29678            2.51738  \n",
+       "1      0.43630            2.70201  \n",
+       "2      0.34139            2.49204  \n",
+       "3      0.34699            2.46531  \n",
+       "4      0.45811            2.45176  \n",
+       "5      0.23351            2.61955  \n",
+       "6      0.47610            2.46570  \n",
+       "7      0.36262            2.37119  \n",
+       "8      0.47501            2.26425  \n",
+       "9      0.43562            2.26646  \n",
+       "10     0.33172            3.08854  \n",
+       "11     0.25497            3.17728  \n",
+       "12     0.33088            2.53320  \n",
+       "13     0.14074            3.60214  \n",
+       "14     0.40105            2.51011  "
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.head(15) # Show the first 15 entries of the dataset"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "9cfa5aa0",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.144934Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.144526Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.177556Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.176111Z"
+    },
+    "papermill": {
+     "duration": 0.042731,
+     "end_time": "2025-02-22T19:52:20.179518",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.136787",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "<class 'pandas.core.frame.DataFrame'>\n",
+      "RangeIndex: 158 entries, 0 to 157\n",
+      "Data columns (total 12 columns):\n",
+      " #   Column                         Non-Null Count  Dtype  \n",
+      "---  ------                         --------------  -----  \n",
+      " 0   Country                        158 non-null    object \n",
+      " 1   Region                         158 non-null    object \n",
+      " 2   Happiness Rank                 158 non-null    int64  \n",
+      " 3   Happiness Score                158 non-null    float64\n",
+      " 4   Standard Error                 158 non-null    float64\n",
+      " 5   Economy (GDP per Capita)       158 non-null    float64\n",
+      " 6   Family                         158 non-null    float64\n",
+      " 7   Health (Life Expectancy)       158 non-null    float64\n",
+      " 8   Freedom                        158 non-null    float64\n",
+      " 9   Trust (Government Corruption)  158 non-null    float64\n",
+      " 10  Generosity                     158 non-null    float64\n",
+      " 11  Dystopia Residual              158 non-null    float64\n",
+      "dtypes: float64(9), int64(1), object(2)\n",
+      "memory usage: 14.9+ KB\n"
+     ]
+    }
+   ],
+   "source": [
+    "df.info() # get some info about the data, such as number of entries and features, etc."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "f41f39fd",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.194685Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.194196Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.231369Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.230155Z"
+    },
+    "papermill": {
+     "duration": 0.046993,
+     "end_time": "2025-02-22T19:52:20.233478",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.186485",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Happiness Rank</th>\n",
+       "      <th>Happiness Score</th>\n",
+       "      <th>Standard Error</th>\n",
+       "      <th>Economy (GDP per Capita)</th>\n",
+       "      <th>Family</th>\n",
+       "      <th>Health (Life Expectancy)</th>\n",
+       "      <th>Freedom</th>\n",
+       "      <th>Trust (Government Corruption)</th>\n",
+       "      <th>Generosity</th>\n",
+       "      <th>Dystopia Residual</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>count</th>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>158.000000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>mean</th>\n",
+       "      <td>79.493671</td>\n",
+       "      <td>5.375734</td>\n",
+       "      <td>0.047885</td>\n",
+       "      <td>0.846137</td>\n",
+       "      <td>0.991046</td>\n",
+       "      <td>0.630259</td>\n",
+       "      <td>0.428615</td>\n",
+       "      <td>0.143422</td>\n",
+       "      <td>0.237296</td>\n",
+       "      <td>2.098977</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>std</th>\n",
+       "      <td>45.754363</td>\n",
+       "      <td>1.145010</td>\n",
+       "      <td>0.017146</td>\n",
+       "      <td>0.403121</td>\n",
+       "      <td>0.272369</td>\n",
+       "      <td>0.247078</td>\n",
+       "      <td>0.150693</td>\n",
+       "      <td>0.120034</td>\n",
+       "      <td>0.126685</td>\n",
+       "      <td>0.553550</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>min</th>\n",
+       "      <td>1.000000</td>\n",
+       "      <td>2.839000</td>\n",
+       "      <td>0.018480</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.000000</td>\n",
+       "      <td>0.328580</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>25%</th>\n",
+       "      <td>40.250000</td>\n",
+       "      <td>4.526000</td>\n",
+       "      <td>0.037268</td>\n",
+       "      <td>0.545808</td>\n",
+       "      <td>0.856823</td>\n",
+       "      <td>0.439185</td>\n",
+       "      <td>0.328330</td>\n",
+       "      <td>0.061675</td>\n",
+       "      <td>0.150553</td>\n",
+       "      <td>1.759410</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>50%</th>\n",
+       "      <td>79.500000</td>\n",
+       "      <td>5.232500</td>\n",
+       "      <td>0.043940</td>\n",
+       "      <td>0.910245</td>\n",
+       "      <td>1.029510</td>\n",
+       "      <td>0.696705</td>\n",
+       "      <td>0.435515</td>\n",
+       "      <td>0.107220</td>\n",
+       "      <td>0.216130</td>\n",
+       "      <td>2.095415</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>75%</th>\n",
+       "      <td>118.750000</td>\n",
+       "      <td>6.243750</td>\n",
+       "      <td>0.052300</td>\n",
+       "      <td>1.158448</td>\n",
+       "      <td>1.214405</td>\n",
+       "      <td>0.811013</td>\n",
+       "      <td>0.549092</td>\n",
+       "      <td>0.180255</td>\n",
+       "      <td>0.309883</td>\n",
+       "      <td>2.462415</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>max</th>\n",
+       "      <td>158.000000</td>\n",
+       "      <td>7.587000</td>\n",
+       "      <td>0.136930</td>\n",
+       "      <td>1.690420</td>\n",
+       "      <td>1.402230</td>\n",
+       "      <td>1.025250</td>\n",
+       "      <td>0.669730</td>\n",
+       "      <td>0.551910</td>\n",
+       "      <td>0.795880</td>\n",
+       "      <td>3.602140</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       Happiness Rank  Happiness Score  Standard Error  \\\n",
+       "count      158.000000       158.000000      158.000000   \n",
+       "mean        79.493671         5.375734        0.047885   \n",
+       "std         45.754363         1.145010        0.017146   \n",
+       "min          1.000000         2.839000        0.018480   \n",
+       "25%         40.250000         4.526000        0.037268   \n",
+       "50%         79.500000         5.232500        0.043940   \n",
+       "75%        118.750000         6.243750        0.052300   \n",
+       "max        158.000000         7.587000        0.136930   \n",
+       "\n",
+       "       Economy (GDP per Capita)      Family  Health (Life Expectancy)  \\\n",
+       "count                158.000000  158.000000                158.000000   \n",
+       "mean                   0.846137    0.991046                  0.630259   \n",
+       "std                    0.403121    0.272369                  0.247078   \n",
+       "min                    0.000000    0.000000                  0.000000   \n",
+       "25%                    0.545808    0.856823                  0.439185   \n",
+       "50%                    0.910245    1.029510                  0.696705   \n",
+       "75%                    1.158448    1.214405                  0.811013   \n",
+       "max                    1.690420    1.402230                  1.025250   \n",
+       "\n",
+       "          Freedom  Trust (Government Corruption)  Generosity  \\\n",
+       "count  158.000000                     158.000000  158.000000   \n",
+       "mean     0.428615                       0.143422    0.237296   \n",
+       "std      0.150693                       0.120034    0.126685   \n",
+       "min      0.000000                       0.000000    0.000000   \n",
+       "25%      0.328330                       0.061675    0.150553   \n",
+       "50%      0.435515                       0.107220    0.216130   \n",
+       "75%      0.549092                       0.180255    0.309883   \n",
+       "max      0.669730                       0.551910    0.795880   \n",
+       "\n",
+       "       Dystopia Residual  \n",
+       "count         158.000000  \n",
+       "mean            2.098977  \n",
+       "std             0.553550  \n",
+       "min             0.328580  \n",
+       "25%             1.759410  \n",
+       "50%             2.095415  \n",
+       "75%             2.462415  \n",
+       "max             3.602140  "
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.describe() # a quick descriptive summary of the data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "89491029",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006571,
+     "end_time": "2025-02-22T19:52:20.247227",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.240656",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Median : \n",
+    "### It is a robust central tendency measure resistant to outliers (extreme values) "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8a8857bb",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00665,
+     "end_time": "2025-02-22T19:52:20.261480",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.254830",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### Question 1 : Find the median of each numerical feature of this dataset within each region, except the \"Happiness Rank\" feature"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "57ff0fc7",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.278414Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.277997Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.306133Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.304680Z"
+    },
+    "papermill": {
+     "duration": 0.039834,
+     "end_time": "2025-02-22T19:52:20.308183",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.268349",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Happiness Score</th>\n",
+       "      <th>Standard Error</th>\n",
+       "      <th>Economy (GDP per Capita)</th>\n",
+       "      <th>Family</th>\n",
+       "      <th>Health (Life Expectancy)</th>\n",
+       "      <th>Freedom</th>\n",
+       "      <th>Trust (Government Corruption)</th>\n",
+       "      <th>Generosity</th>\n",
+       "      <th>Dystopia Residual</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Region</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>Australia and New Zealand</th>\n",
+       "      <td>7.285</td>\n",
+       "      <td>0.037270</td>\n",
+       "      <td>1.291880</td>\n",
+       "      <td>1.314450</td>\n",
+       "      <td>0.919965</td>\n",
+       "      <td>0.645310</td>\n",
+       "      <td>0.392795</td>\n",
+       "      <td>0.455315</td>\n",
+       "      <td>2.265355</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Central and Eastern Europe</th>\n",
+       "      <td>5.286</td>\n",
+       "      <td>0.042670</td>\n",
+       "      <td>1.012160</td>\n",
+       "      <td>1.106140</td>\n",
+       "      <td>0.731280</td>\n",
+       "      <td>0.350680</td>\n",
+       "      <td>0.042120</td>\n",
+       "      <td>0.152750</td>\n",
+       "      <td>2.025000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Eastern Asia</th>\n",
+       "      <td>5.729</td>\n",
+       "      <td>0.037245</td>\n",
+       "      <td>1.257675</td>\n",
+       "      <td>1.067175</td>\n",
+       "      <td>0.920340</td>\n",
+       "      <td>0.466205</td>\n",
+       "      <td>0.079930</td>\n",
+       "      <td>0.219665</td>\n",
+       "      <td>1.772375</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Latin America and Caribbean</th>\n",
+       "      <td>6.149</td>\n",
+       "      <td>0.052975</td>\n",
+       "      <td>0.909400</td>\n",
+       "      <td>1.146430</td>\n",
+       "      <td>0.696060</td>\n",
+       "      <td>0.519540</td>\n",
+       "      <td>0.108260</td>\n",
+       "      <td>0.214570</td>\n",
+       "      <td>2.709200</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Middle East and Northern Africa</th>\n",
+       "      <td>5.262</td>\n",
+       "      <td>0.044525</td>\n",
+       "      <td>1.017220</td>\n",
+       "      <td>1.000120</td>\n",
+       "      <td>0.721090</td>\n",
+       "      <td>0.347435</td>\n",
+       "      <td>0.140405</td>\n",
+       "      <td>0.167950</td>\n",
+       "      <td>1.998595</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>North America</th>\n",
+       "      <td>7.273</td>\n",
+       "      <td>0.036960</td>\n",
+       "      <td>1.360400</td>\n",
+       "      <td>1.284860</td>\n",
+       "      <td>0.883710</td>\n",
+       "      <td>0.589505</td>\n",
+       "      <td>0.244235</td>\n",
+       "      <td>0.429580</td>\n",
+       "      <td>2.480935</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Southeastern Asia</th>\n",
+       "      <td>5.360</td>\n",
+       "      <td>0.043300</td>\n",
+       "      <td>0.705320</td>\n",
+       "      <td>1.020000</td>\n",
+       "      <td>0.637930</td>\n",
+       "      <td>0.556640</td>\n",
+       "      <td>0.105010</td>\n",
+       "      <td>0.403590</td>\n",
+       "      <td>1.863990</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Southern Asia</th>\n",
+       "      <td>4.565</td>\n",
+       "      <td>0.032250</td>\n",
+       "      <td>0.595430</td>\n",
+       "      <td>0.431060</td>\n",
+       "      <td>0.568740</td>\n",
+       "      <td>0.397860</td>\n",
+       "      <td>0.097190</td>\n",
+       "      <td>0.336710</td>\n",
+       "      <td>1.956370</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Sub-Saharan Africa</th>\n",
+       "      <td>4.272</td>\n",
+       "      <td>0.047775</td>\n",
+       "      <td>0.308445</td>\n",
+       "      <td>0.878375</td>\n",
+       "      <td>0.298155</td>\n",
+       "      <td>0.382910</td>\n",
+       "      <td>0.103875</td>\n",
+       "      <td>0.207305</td>\n",
+       "      <td>1.950050</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Western Europe</th>\n",
+       "      <td>6.937</td>\n",
+       "      <td>0.035950</td>\n",
+       "      <td>1.302320</td>\n",
+       "      <td>1.289070</td>\n",
+       "      <td>0.896670</td>\n",
+       "      <td>0.614770</td>\n",
+       "      <td>0.218430</td>\n",
+       "      <td>0.296780</td>\n",
+       "      <td>2.123670</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                 Happiness Score  Standard Error  \\\n",
+       "Region                                                             \n",
+       "Australia and New Zealand                  7.285        0.037270   \n",
+       "Central and Eastern Europe                 5.286        0.042670   \n",
+       "Eastern Asia                               5.729        0.037245   \n",
+       "Latin America and Caribbean                6.149        0.052975   \n",
+       "Middle East and Northern Africa            5.262        0.044525   \n",
+       "North America                              7.273        0.036960   \n",
+       "Southeastern Asia                          5.360        0.043300   \n",
+       "Southern Asia                              4.565        0.032250   \n",
+       "Sub-Saharan Africa                         4.272        0.047775   \n",
+       "Western Europe                             6.937        0.035950   \n",
+       "\n",
+       "                                 Economy (GDP per Capita)    Family  \\\n",
+       "Region                                                                \n",
+       "Australia and New Zealand                        1.291880  1.314450   \n",
+       "Central and Eastern Europe                       1.012160  1.106140   \n",
+       "Eastern Asia                                     1.257675  1.067175   \n",
+       "Latin America and Caribbean                      0.909400  1.146430   \n",
+       "Middle East and Northern Africa                  1.017220  1.000120   \n",
+       "North America                                    1.360400  1.284860   \n",
+       "Southeastern Asia                                0.705320  1.020000   \n",
+       "Southern Asia                                    0.595430  0.431060   \n",
+       "Sub-Saharan Africa                               0.308445  0.878375   \n",
+       "Western Europe                                   1.302320  1.289070   \n",
+       "\n",
+       "                                 Health (Life Expectancy)   Freedom  \\\n",
+       "Region                                                                \n",
+       "Australia and New Zealand                        0.919965  0.645310   \n",
+       "Central and Eastern Europe                       0.731280  0.350680   \n",
+       "Eastern Asia                                     0.920340  0.466205   \n",
+       "Latin America and Caribbean                      0.696060  0.519540   \n",
+       "Middle East and Northern Africa                  0.721090  0.347435   \n",
+       "North America                                    0.883710  0.589505   \n",
+       "Southeastern Asia                                0.637930  0.556640   \n",
+       "Southern Asia                                    0.568740  0.397860   \n",
+       "Sub-Saharan Africa                               0.298155  0.382910   \n",
+       "Western Europe                                   0.896670  0.614770   \n",
+       "\n",
+       "                                 Trust (Government Corruption)  Generosity  \\\n",
+       "Region                                                                       \n",
+       "Australia and New Zealand                             0.392795    0.455315   \n",
+       "Central and Eastern Europe                            0.042120    0.152750   \n",
+       "Eastern Asia                                          0.079930    0.219665   \n",
+       "Latin America and Caribbean                           0.108260    0.214570   \n",
+       "Middle East and Northern Africa                       0.140405    0.167950   \n",
+       "North America                                         0.244235    0.429580   \n",
+       "Southeastern Asia                                     0.105010    0.403590   \n",
+       "Southern Asia                                         0.097190    0.336710   \n",
+       "Sub-Saharan Africa                                    0.103875    0.207305   \n",
+       "Western Europe                                        0.218430    0.296780   \n",
+       "\n",
+       "                                 Dystopia Residual  \n",
+       "Region                                              \n",
+       "Australia and New Zealand                 2.265355  \n",
+       "Central and Eastern Europe                2.025000  \n",
+       "Eastern Asia                              1.772375  \n",
+       "Latin America and Caribbean               2.709200  \n",
+       "Middle East and Northern Africa           1.998595  \n",
+       "North America                             2.480935  \n",
+       "Southeastern Asia                         1.863990  \n",
+       "Southern Asia                             1.956370  \n",
+       "Sub-Saharan Africa                        1.950050  \n",
+       "Western Europe                            2.123670  "
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.drop(['Country', 'Happiness Rank'], axis=1).groupby('Region').apply(lambda x: x.median())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9e6d99c2",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007662,
+     "end_time": "2025-02-22T19:52:20.323218",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.315556",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Trimmed mean : an another robust measure of location\n",
+    "#### It is a statistical measure that removes a certain percentage of the largest and smallest values before calculating the mean. \n",
+    "#### This helps reduce the effect of outliers (extreme values) and skewed data, giving a more robust central tendency measure\n",
+    "#### compared to the regular mean. It is widely used."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "761d357a",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006843,
+     "end_time": "2025-02-22T19:52:20.337634",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.330791",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### Question 2 : Calculate the happiness score trimmed mean of the world to reduce the influence of outliers."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a36a896f",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007047,
+     "end_time": "2025-02-22T19:52:20.351779",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.344732",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### 1st way : Calculate the trimmed mean manually using Pandas "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "da37cc4f",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.367259Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.366877Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.374737Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.373763Z"
+    },
+    "papermill": {
+     "duration": 0.017649,
+     "end_time": "2025-02-22T19:52:20.376468",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.358819",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "5.3633984375"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Manual calculation (for understanding)\n",
+    "sorted_col = df['Happiness Score'].sort_values().reset_index(drop=True)\n",
+    "\n",
+    "n = len(sorted_col)\n",
+    "\n",
+    "trim_percent = 0.1  # 10%\n",
+    "\n",
+    "k = int(n * trim_percent)\n",
+    "\n",
+    "trimmed_col = sorted_col[k:-k] # drop 10% of data from the bottom and 10% of data from the top\n",
+    "\n",
+    "trimmed_mean_1 = trimmed_col.mean()\n",
+    "trimmed_mean_1"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "44f020c0",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006791,
+     "end_time": "2025-02-22T19:52:20.390706",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.383915",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### 2nd way : The efficient and concise way with SciPy\n",
+    "#### Calculate the trimmed mean automatically using the scipy.stats.trim_mean() function"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "a627c1cb",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.406365Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.405970Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.412348Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.411297Z"
+    },
+    "papermill": {
+     "duration": 0.016084,
+     "end_time": "2025-02-22T19:52:20.413915",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.397831",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "5.3633984375"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# the parameter proportiontocut=0.1 means drop 10% of data from the bottom and 10% of data from the top\n",
+    "trimmed_mean_2 = sstats.trim_mean(df['Happiness Score'], proportiontocut=0.1) # using a 10% trim, we get a more accurate central value.\n",
+    "# or trimmed_mean_2 = sstats.trim_mean(df['Population'], 0.1)\n",
+    "trimmed_mean_2"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "97a42f85",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007448,
+     "end_time": "2025-02-22T19:52:20.428927",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.421479",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Mean vs. Trimmed Mean: \n",
+    "#### Question 3 : Calculate the average happiness score of each region, then their respective trimmed means."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b28e302c",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007926,
+     "end_time": "2025-02-22T19:52:20.444366",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.436440",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### Analys Report: Based on the data at hand, the region with the highest average of happiness is \"Australia and New Zealand\" which scored \n",
+    "#### 7.285000, then comes \"North America\" with 7.273000 scores of happiness. Finally, \"Sub-Saharan Africa\" with score of 4.202800 is the \n",
+    "#### lowest happiness region of the world.\n",
+    "#### Note: The mean and trimmed mean of each region are approximately equal, since the data within each region is normally distributed \n",
+    "#### and there are not outliers."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "9ffefae4",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.460789Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.460412Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.490262Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.489126Z"
+    },
+    "papermill": {
+     "duration": 0.040511,
+     "end_time": "2025-02-22T19:52:20.492278",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.451767",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Region                                        \n",
+       "Australia and New Zealand        mean:            7.285000\n",
+       "                                 trimmed_mean:    7.285000\n",
+       "Central and Eastern Europe       mean:            5.332931\n",
+       "                                 trimmed_mean:    5.345280\n",
+       "Eastern Asia                     mean:            5.626167\n",
+       "                                 trimmed_mean:    5.626167\n",
+       "Latin America and Caribbean      mean:            6.144682\n",
+       "                                 trimmed_mean:    6.192444\n",
+       "Middle East and Northern Africa  mean:            5.406900\n",
+       "                                 trimmed_mean:    5.429750\n",
+       "North America                    mean:            7.273000\n",
+       "                                 trimmed_mean:    7.273000\n",
+       "Southeastern Asia                mean:            5.317444\n",
+       "                                 trimmed_mean:    5.317444\n",
+       "Southern Asia                    mean:            4.580857\n",
+       "                                 trimmed_mean:    4.580857\n",
+       "Sub-Saharan Africa               mean:            4.202800\n",
+       "                                 trimmed_mean:    4.207250\n",
+       "Western Europe                   mean:            6.689619\n",
+       "                                 trimmed_mean:    6.786765\n",
+       "Name: Happiness Score, dtype: float64"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "mean_vs_trimmed_mean = df.groupby('Region')['Happiness Score'].apply(lambda x: {\n",
+    "    'mean:': x.mean(),\n",
+    "    'trimmed_mean:': sstats.trim_mean(x, 0.1) # trim 10% from both ends\n",
+    "})\n",
+    "mean_vs_trimmed_mean"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5f1c5cee",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007144,
+     "end_time": "2025-02-22T19:52:20.507407",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.500263",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Weighted Mean : \n",
+    "#### An average where each value is multiplied by its weight, and the sum is divided by the total weight.\n",
+    "\n",
+    "#### Formula :\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "97eb564c",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007502,
+     "end_time": "2025-02-22T19:52:20.522334",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.514832",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### Question 4.a : Within each region, compute the weighted mean of the two following factors: \n",
+    "####      GDP per capita and life expectancy, both weighted by the family support"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ac6a7728",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007255,
+     "end_time": "2025-02-22T19:52:20.537105",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.529850",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "The groupby operation splits the DataFrame into groups based on 'Region', and for each group, selects the 'Economy' column. So each 'x' in the lambda is a Series of 'Economy' values for that region:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "f77c91fb",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.553398Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.552943Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.569482Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.568067Z"
+    },
+    "papermill": {
+     "duration": 0.027143,
+     "end_time": "2025-02-22T19:52:20.571623",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.544480",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Region\n",
+       "Australia and New Zealand          1.291714\n",
+       "Central and Eastern Europe         0.959169\n",
+       "Eastern Asia                       1.146862\n",
+       "Latin America and Caribbean        0.892136\n",
+       "Middle East and Northern Africa    1.121820\n",
+       "North America                      1.359398\n",
+       "Southeastern Asia                  0.839238\n",
+       "Southern Asia                      0.614058\n",
+       "Sub-Saharan Africa                 0.417563\n",
+       "Western Europe                     1.303566\n",
+       "Name: Economy (GDP per Capita), dtype: float64"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# For understanding how the groupby () method works with one column:\n",
+    "df.groupby('Region')['Economy (GDP per Capita)'].apply(lambda x: np.average(x, weights=df.loc[x.index, 'Family']))  "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "6ff420c0",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.588847Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.588388Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.606899Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.605821Z"
+    },
+    "papermill": {
+     "duration": 0.028632,
+     "end_time": "2025-02-22T19:52:20.608515",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.579883",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Region\n",
+       "Australia and New Zealand           [1.2917143991783637, 0.9199189534406025]\n",
+       "Central and Eastern Europe          [0.9591694910707005, 0.7188642314993371]\n",
+       "Eastern Asia                        [1.1468620353638868, 0.8704043014540911]\n",
+       "Latin America and Caribbean         [0.8921362601439689, 0.7104272366188898]\n",
+       "Middle East and Northern Africa     [1.1218197273897597, 0.7168929099718628]\n",
+       "North America                       [1.3593978266114595, 0.8843540234733746]\n",
+       "Southeastern Asia                   [0.8392384462105738, 0.6925395750696167]\n",
+       "Southern Asia                       [0.6140584902318889, 0.5773442482041066]\n",
+       "Sub-Saharan Africa                 [0.41756342701941085, 0.2832187103394575]\n",
+       "Western Europe                      [1.3035661360368702, 0.9092229618368637]\n",
+       "Name: (Economy (GDP per Capita), Health (Life Expectancy)), dtype: object"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# First approach: \n",
+    "weighted_means_1 = df.groupby('Region')[['Economy (GDP per Capita)', 'Health (Life Expectancy)']].apply(\n",
+    "    lambda x: np.average(x, axis=0, weights=df.loc[x.index, 'Family']) # Use group-specific weights\n",
+    "                                                                                                     )  \n",
+    "weighted_means_1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "23cf5fdb",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.625588Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.625144Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.655522Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.654470Z"
+    },
+    "papermill": {
+     "duration": 0.040896,
+     "end_time": "2025-02-22T19:52:20.657302",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.616406",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Economy (GDP per Capita)</th>\n",
+       "      <th>Health (Life Expectancy)</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Region</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>Australia and New Zealand</th>\n",
+       "      <td>1.291714</td>\n",
+       "      <td>0.919919</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Central and Eastern Europe</th>\n",
+       "      <td>0.959169</td>\n",
+       "      <td>0.718864</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Eastern Asia</th>\n",
+       "      <td>1.146862</td>\n",
+       "      <td>0.870404</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Latin America and Caribbean</th>\n",
+       "      <td>0.892136</td>\n",
+       "      <td>0.710427</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Middle East and Northern Africa</th>\n",
+       "      <td>1.121820</td>\n",
+       "      <td>0.716893</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>North America</th>\n",
+       "      <td>1.359398</td>\n",
+       "      <td>0.884354</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Southeastern Asia</th>\n",
+       "      <td>0.839238</td>\n",
+       "      <td>0.692540</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Southern Asia</th>\n",
+       "      <td>0.614058</td>\n",
+       "      <td>0.577344</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Sub-Saharan Africa</th>\n",
+       "      <td>0.417563</td>\n",
+       "      <td>0.283219</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Western Europe</th>\n",
+       "      <td>1.303566</td>\n",
+       "      <td>0.909223</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                 Economy (GDP per Capita)  \\\n",
+       "Region                                                      \n",
+       "Australia and New Zealand                        1.291714   \n",
+       "Central and Eastern Europe                       0.959169   \n",
+       "Eastern Asia                                     1.146862   \n",
+       "Latin America and Caribbean                      0.892136   \n",
+       "Middle East and Northern Africa                  1.121820   \n",
+       "North America                                    1.359398   \n",
+       "Southeastern Asia                                0.839238   \n",
+       "Southern Asia                                    0.614058   \n",
+       "Sub-Saharan Africa                               0.417563   \n",
+       "Western Europe                                   1.303566   \n",
+       "\n",
+       "                                 Health (Life Expectancy)  \n",
+       "Region                                                     \n",
+       "Australia and New Zealand                        0.919919  \n",
+       "Central and Eastern Europe                       0.718864  \n",
+       "Eastern Asia                                     0.870404  \n",
+       "Latin America and Caribbean                      0.710427  \n",
+       "Middle East and Northern Africa                  0.716893  \n",
+       "North America                                    0.884354  \n",
+       "Southeastern Asia                                0.692540  \n",
+       "Southern Asia                                    0.577344  \n",
+       "Sub-Saharan Africa                               0.283219  \n",
+       "Western Europe                                   0.909223  "
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Second approach: clear and concise\n",
+    "weighted_means_2 = df.groupby('Region')[['Economy (GDP per Capita)', 'Health (Life Expectancy)']].apply(\n",
+    "    lambda x: pd.Series({\n",
+    "        col: np.average(x[col], weights=df.loc[x.index, 'Family']) for col in x.columns # list comprehension\n",
+    "    })\n",
+    ")\n",
+    "weighted_means_2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "6e452851",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.675757Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.675389Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.701075Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.699891Z"
+    },
+    "papermill": {
+     "duration": 0.036991,
+     "end_time": "2025-02-22T19:52:20.702825",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.665834",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Weighted GDP</th>\n",
+       "      <th>Weighted Health</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Region</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>Australia and New Zealand</th>\n",
+       "      <td>1.291714</td>\n",
+       "      <td>0.919919</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Central and Eastern Europe</th>\n",
+       "      <td>0.959169</td>\n",
+       "      <td>0.718864</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Eastern Asia</th>\n",
+       "      <td>1.146862</td>\n",
+       "      <td>0.870404</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Latin America and Caribbean</th>\n",
+       "      <td>0.892136</td>\n",
+       "      <td>0.710427</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Middle East and Northern Africa</th>\n",
+       "      <td>1.121820</td>\n",
+       "      <td>0.716893</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>North America</th>\n",
+       "      <td>1.359398</td>\n",
+       "      <td>0.884354</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Southeastern Asia</th>\n",
+       "      <td>0.839238</td>\n",
+       "      <td>0.692540</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Southern Asia</th>\n",
+       "      <td>0.614058</td>\n",
+       "      <td>0.577344</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Sub-Saharan Africa</th>\n",
+       "      <td>0.417563</td>\n",
+       "      <td>0.283219</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Western Europe</th>\n",
+       "      <td>1.303566</td>\n",
+       "      <td>0.909223</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                 Weighted GDP  Weighted Health\n",
+       "Region                                                        \n",
+       "Australia and New Zealand            1.291714         0.919919\n",
+       "Central and Eastern Europe           0.959169         0.718864\n",
+       "Eastern Asia                         1.146862         0.870404\n",
+       "Latin America and Caribbean          0.892136         0.710427\n",
+       "Middle East and Northern Africa      1.121820         0.716893\n",
+       "North America                        1.359398         0.884354\n",
+       "Southeastern Asia                    0.839238         0.692540\n",
+       "Southern Asia                        0.614058         0.577344\n",
+       "Sub-Saharan Africa                   0.417563         0.283219\n",
+       "Western Europe                       1.303566         0.909223"
+      ]
+     },
+     "execution_count": 14,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Third approach:\n",
+    "# Calculate weighted mean for multiple columns by region\n",
+    "weighted_means_3 = df.groupby('Region')[['Economy (GDP per Capita)', 'Health (Life Expectancy)']].apply(\n",
+    "    lambda x: pd.Series({\n",
+    "        'Weighted GDP': np.average(x['Economy (GDP per Capita)'], weights=df.loc[x.index, 'Family']),\n",
+    "        'Weighted Health': np.average(x['Health (Life Expectancy)'], weights=df.loc[x.index, 'Family'])\n",
+    "    })\n",
+    ")\n",
+    "weighted_means_3"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a02769f7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008222,
+     "end_time": "2025-02-22T19:52:20.719930",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.711708",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Weighted Median : \n",
+    "#### The value separating the higher half from the lower half of a dataset, where each data point contributes proportionally to its weight.\n",
+    "\n",
+    "#### Formula :"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8d05b5f4",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008221,
+     "end_time": "2025-02-22T19:52:20.736352",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.728131",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### Question 4.b : Compute the weighted median of the two following factors: \n",
+    "####      GDP per capita and life expectancy, both weighted by the family support"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "9a634c7d",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-02-22T19:52:20.754286Z",
+     "iopub.status.busy": "2025-02-22T19:52:20.753868Z",
+     "iopub.status.idle": "2025-02-22T19:52:20.785147Z",
+     "shell.execute_reply": "2025-02-22T19:52:20.783742Z"
+    },
+    "papermill": {
+     "duration": 0.042391,
+     "end_time": "2025-02-22T19:52:20.787057",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.744666",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Economy (GDP per Capita)</th>\n",
+       "      <th>Health (Life Expectancy)</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Region</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>Australia and New Zealand</th>\n",
+       "      <td>1.291714</td>\n",
+       "      <td>0.919919</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Central and Eastern Europe</th>\n",
+       "      <td>1.026008</td>\n",
+       "      <td>0.733406</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Eastern Asia</th>\n",
+       "      <td>1.258108</td>\n",
+       "      <td>0.920727</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Latin America and Caribbean</th>\n",
+       "      <td>0.919961</td>\n",
+       "      <td>0.696613</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Middle East and Northern Africa</th>\n",
+       "      <td>1.085762</td>\n",
+       "      <td>0.722934</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>North America</th>\n",
+       "      <td>1.359398</td>\n",
+       "      <td>0.884354</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Southeastern Asia</th>\n",
+       "      <td>0.789652</td>\n",
+       "      <td>0.684096</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Southern Asia</th>\n",
+       "      <td>0.654318</td>\n",
+       "      <td>0.572681</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Sub-Saharan Africa</th>\n",
+       "      <td>0.358103</td>\n",
+       "      <td>0.300117</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Western Europe</th>\n",
+       "      <td>1.305127</td>\n",
+       "      <td>0.896496</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                 Economy (GDP per Capita)  \\\n",
+       "Region                                                      \n",
+       "Australia and New Zealand                        1.291714   \n",
+       "Central and Eastern Europe                       1.026008   \n",
+       "Eastern Asia                                     1.258108   \n",
+       "Latin America and Caribbean                      0.919961   \n",
+       "Middle East and Northern Africa                  1.085762   \n",
+       "North America                                    1.359398   \n",
+       "Southeastern Asia                                0.789652   \n",
+       "Southern Asia                                    0.654318   \n",
+       "Sub-Saharan Africa                               0.358103   \n",
+       "Western Europe                                   1.305127   \n",
+       "\n",
+       "                                 Health (Life Expectancy)  \n",
+       "Region                                                     \n",
+       "Australia and New Zealand                        0.919919  \n",
+       "Central and Eastern Europe                       0.733406  \n",
+       "Eastern Asia                                     0.920727  \n",
+       "Latin America and Caribbean                      0.696613  \n",
+       "Middle East and Northern Africa                  0.722934  \n",
+       "North America                                    0.884354  \n",
+       "Southeastern Asia                                0.684096  \n",
+       "Southern Asia                                    0.572681  \n",
+       "Sub-Saharan Africa                               0.300117  \n",
+       "Western Europe                                   0.896496  "
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "weightes_medians = df.groupby('Region')[['Economy (GDP per Capita)', 'Health (Life Expectancy)']].apply(\n",
+    "    lambda x: pd.Series({\n",
+    "        col: wquantiles.median(x[col], weights=df.loc[x.index, 'Family']) for col in x.columns\n",
+    "    })\n",
+    ")\n",
+    "weightes_medians"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e0278a59",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008033,
+     "end_time": "2025-02-22T19:52:20.803823",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.795790",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Some Key Takeaways :"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d4652c09",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008632,
+     "end_time": "2025-02-22T19:52:20.821261",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.812629",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Trimmed mean is useful when there are outliers, so datasets with potential outliers in numerical features (columns) would be good. \n",
+    "### Weighted mean and median require a weight feature (column), so datasets should have a variable that can serve as weights, like frequency, quantity, or importance.\n",
+    "\n",
+    "#### E.g., some real-world data with natural weights :\n",
+    "#### - economic data might have income values with population weights, \n",
+    "#### - sales data could have prices weighted by quantities sold, \n",
+    "#### - survey data where responses are weighted by demographics."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c0d969f3",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009039,
+     "end_time": "2025-02-22T19:52:20.839216",
+     "exception": false,
+     "start_time": "2025-02-22T19:52:20.830177",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Pandas DataFrame:\n",
+    "#### - the groupby() method splits the DataFrame into groups based on its specific categorical feature (column) containing two or more unique values\n",
+    "#### - the apply() method is used to apply one or more aggregate functions to each group."
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [
+    {
+     "datasetId": 894,
+     "sourceId": 813759,
+     "sourceType": "datasetVersion"
+    },
+    {
+     "datasetId": 2818963,
+     "sourceId": 4862520,
+     "sourceType": "datasetVersion"
+    },
+    {
+     "datasetId": 6708465,
+     "sourceId": 10807363,
+     "sourceType": "datasetVersion"
+    }
+   ],
+   "dockerImageVersionId": 30886,
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.12"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 13.130226,
+   "end_time": "2025-02-22T19:52:21.569536",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2025-02-22T19:52:08.439310",
+   "version": "2.6.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
